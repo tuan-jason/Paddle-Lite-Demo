@@ -14,6 +14,7 @@
 
 #include "pipeline.h"
 #include <iostream>
+#include <sstream>
 
 cv::Mat GetRotateCropImage(cv::Mat srcimage,
                            std::vector<std::vector<int>> box) {
@@ -284,4 +285,69 @@ bool Pipeline::Process_val(int inTextureId, int outTextureId, int textureWidth,
 
   WriteRGBAImageBackToGLTexture(img_vis, outTextureId, &writeGLTextureTime);
   return true;
+}
+
+std::string Pipeline::RunOcrOnBitmap(const uint8_t *pixels, int width,
+                                     int height,
+                                     const std::string &savedImagePath) {
+  if (!pixels) return "";
+
+  cv::Mat rgbaImage(height, width, CV_8UC4, const_cast<uint8_t *>(pixels));
+  cv::Mat bgrImage;
+  // Android ARGB_8888 stores bytes as BGRA in little-endian native memory.
+  cv::cvtColor(rgbaImage, bgrImage, cv::COLOR_BGRA2BGR);
+
+  // Do NOT force a fixed 448×448 resize here. DetPredictor::Predict already
+  // calls DetResizeImg internally, which resizes proportionally to max_side_len
+  // (960, from config.txt) while preserving aspect ratio and rounding to 32.
+  // Forcing 448×448 destroys the aspect ratio of gallery photos, which distorts
+  // characters enough to cause mis-recognition (e.g., hiragana read as kanji).
+
+  int use_direction_classify = int(Config_["use_direction_classify"]);
+  cv::Mat srcimg;
+  bgrImage.copyTo(srcimg);
+
+  auto boxes = detPredictor_->Predict(srcimg, Config_, nullptr, nullptr, nullptr);
+
+  cv::Mat img;
+  bgrImage.copyTo(img);
+
+  std::vector<std::string> rec_text;
+  std::vector<float> rec_text_score;
+  for (int i = (int)boxes.size() - 1; i >= 0; i--) {
+    cv::Mat crop_img = GetRotateCropImage(img, boxes[i]);
+    if (use_direction_classify >= 1) {
+      crop_img = clsPredictor_->Predict(crop_img, nullptr, nullptr, nullptr, 0.9);
+    }
+    auto res = recPredictor_->Predict(crop_img, nullptr, nullptr, nullptr, charactor_dict_);
+    rec_text.push_back(res.first);
+    rec_text_score.push_back(res.second);
+  }
+
+  if (!savedImagePath.empty()) {
+    Visualization(bgrImage, boxes, savedImagePath);
+  }
+
+  // Serialize results to JSON.
+  // Entry j pairs rec_text[j] with boxes[boxes.size()-1-j] (reverse iteration above).
+  std::ostringstream json;
+  json << "[";
+  for (int j = 0; j < (int)rec_text.size(); j++) {
+    if (j > 0) json << ",";
+    int bi = (int)boxes.size() - 1 - j;
+    json << "{\"box\":[";
+    for (int p = 0; p < 4; p++) {
+      if (p > 0) json << ",";
+      json << "[" << boxes[bi][p][0] << "," << boxes[bi][p][1] << "]";
+    }
+    json << "],\"text\":\"";
+    for (char c : rec_text[j]) {
+      if (c == '"')       json << "\\\"";
+      else if (c == '\\') json << "\\\\";
+      else                json << c;
+    }
+    json << "\",\"score\":" << rec_text_score[j] << "}";
+  }
+  json << "]";
+  return json.str();
 }

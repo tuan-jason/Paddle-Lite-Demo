@@ -68,6 +68,7 @@ DetPredictor::DetPredictor(const std::string &modelDir, const int cpuThreadNum,
 }
 
 void DetPredictor::Preprocess(const cv::Mat &srcimg, const int max_side_len) {
+  ratio_hw_.clear();
   cv::Mat img = DetResizeImg(srcimg, max_side_len, ratio_hw_);
   cv::Mat img_fp;
   img.convertTo(img_fp, CV_32FC3, 1.0 / 255.f);

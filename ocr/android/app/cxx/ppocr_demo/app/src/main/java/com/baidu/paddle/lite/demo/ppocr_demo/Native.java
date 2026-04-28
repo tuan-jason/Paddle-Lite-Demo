@@ -1,7 +1,10 @@
 package com.baidu.paddle.lite.demo.ppocr_demo;
 
 import android.content.Context;
+import android.graphics.Bitmap;
 import android.util.Log;
+
+import java.nio.ByteBuffer;
 
 import com.baidu.paddle.lite.demo.common.SDKExceptions;
 import com.baidu.paddle.lite.demo.common.Utils;
@@ -59,5 +62,15 @@ public class Native {
 
     public static native boolean nativeRelease(long ctx);
 
+    public String processBitmap(Bitmap bitmap, String savedImagePath) {
+        if (ctx == 0) return null;
+        Bitmap rgba = bitmap.copy(Bitmap.Config.ARGB_8888, false);
+        ByteBuffer buffer = ByteBuffer.allocate(rgba.getByteCount());
+        rgba.copyPixelsToBuffer(buffer);
+        return nativeProcessBitmap(ctx, buffer.array(), rgba.getWidth(), rgba.getHeight(), savedImagePath);
+    }
+
     public static native boolean nativeProcess(long ctx, int inTextureId, int outTextureId, int textureWidth, int textureHeight, String savedImagePath);
+
+    public static native String nativeProcessBitmap(long ctx, byte[] rgbaPixels, int width, int height, String savedImagePath);
 }

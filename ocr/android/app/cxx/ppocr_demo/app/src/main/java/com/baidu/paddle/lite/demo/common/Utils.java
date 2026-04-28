@@ -249,11 +249,13 @@ public class Utils {
             }
         }
 
-        // check SD card power
-        int perm = ctx.checkCallingOrSelfPermission("android.permission.WRITE_EXTERNAL_STORAGE");
-        if (!(perm == PackageManager.PERMISSION_GRANTED)) {
-            // Log.e(TAG, "please grant permission for SD storeage.");
-            throw new SDKExceptions.NoSDCardPermission();
+        // WRITE_EXTERNAL_STORAGE is only relevant on Android 10 (API 29) and below.
+        if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.Q) {
+            int perm = ctx.checkCallingOrSelfPermission("android.permission.WRITE_EXTERNAL_STORAGE");
+            if (!(perm == PackageManager.PERMISSION_GRANTED)) {
+                // Log.e(TAG, "please grant permission for SD storeage.");
+                throw new SDKExceptions.NoSDCardPermission();
+            }
         }
         // check whether file on SD card
         File fileInSD = new File(ctx.getExternalFilesDir(null), nnFileName);

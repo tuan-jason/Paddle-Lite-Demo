@@ -83,6 +83,8 @@ RecPredictor::Postprocess(const cv::Mat &rgbaImage,
   auto *predict_batch = output_tensor0->data<float>();
   auto predict_shape = output_tensor0->shape();
 
+  LOGD("[diag] predict_shape[2]=%d charactor_dict.size()=%d",
+       (int)predict_shape[2], (int)charactor_dict.size());
   // ctc decode
   std::string str_res;
   int argmax_idx;
@@ -104,7 +106,12 @@ RecPredictor::Postprocess(const cv::Mat &rgbaImage,
     }
     last_index = argmax_idx;
   }
-  score /= count;
+  // Guard against div-by-zero: when all CTC time steps output the blank token
+  // (index 0), count stays 0. score/0 produces NaN/inf, which std::ostringstream
+  // serializes as "nan"/"inf" — not valid JSON numbers — causing org.json to throw
+  // and OcrResultParser to silently return an empty result array.
+  // Revert by removing the if-guard to restore original behaviour.
+  if (count > 0) score /= count;
   return std::make_pair(str_res, score);
 }
 
