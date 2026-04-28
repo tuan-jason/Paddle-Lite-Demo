@@ -12,6 +12,7 @@ import android.media.ExifInterface;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.SystemClock;
 import android.util.Log;
 import android.view.View;
 import android.view.WindowManager;
@@ -372,6 +373,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 @Override
                 public void run() {
                     try {
+                        long startTs = SystemClock.elapsedRealtime();
                         String json = predictor.processBitmap(bitmap, outPath);
                         final OcrResult[] results = OcrResultParser.parse(json);
                         Log.v("tuancoltech", "results.size: " + results.length);
@@ -394,7 +396,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                             runOnUiThread(() -> Toast.makeText(MainActivity.this, "No question found!", Toast.LENGTH_LONG).show());
                             return;
                         }
-                        QuestionBoxRenderer.INSTANCE.render(bitmap, regions, outPath);
+                        long detectionTime = SystemClock.elapsedRealtime() - startTs;
+                        QuestionBoxRenderer.INSTANCE.render(bitmap, regions, outPath, detectionTime);
                         Log.v(TAG, "outputPath: " + outPath + "\nExisting: " + (new File(outPath).exists()) + "\nSize: " + (new File(outPath).exists()) + " bytes");
 
                         runOnUiThread(() -> {
