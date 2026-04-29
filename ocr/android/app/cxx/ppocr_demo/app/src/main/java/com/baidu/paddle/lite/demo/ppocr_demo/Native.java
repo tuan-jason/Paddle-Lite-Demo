@@ -2,7 +2,7 @@ package com.baidu.paddle.lite.demo.ppocr_demo;
 
 import android.content.Context;
 import android.graphics.Bitmap;
-import android.util.Log;
+import android.os.SystemClock;
 
 import java.nio.ByteBuffer;
 
@@ -67,7 +67,16 @@ public class Native {
         Bitmap rgba = bitmap.copy(Bitmap.Config.ARGB_8888, false);
         ByteBuffer buffer = ByteBuffer.allocate(rgba.getByteCount());
         rgba.copyPixelsToBuffer(buffer);
-        return nativeProcessBitmap(ctx, buffer.array(), rgba.getWidth(), rgba.getHeight(), savedImagePath);
+        long t0 = SystemClock.elapsedRealtime();
+        String json = nativeProcessBitmap(ctx, buffer.array(), rgba.getWidth(), rgba.getHeight(), savedImagePath);
+        long processBitmapMs = SystemClock.elapsedRealtime() - t0;
+        OcrLatencyBaselineLogger.logProcessBitmapSample(
+                savedImagePath,
+                processBitmapMs,
+                rgba.getWidth(),
+                rgba.getHeight()
+        );
+        return json;
     }
 
     public static native boolean nativeProcess(long ctx, int inTextureId, int outTextureId, int textureWidth, int textureHeight, String savedImagePath);

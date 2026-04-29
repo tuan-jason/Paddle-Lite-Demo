@@ -13,6 +13,7 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.SystemClock;
+import org.opencv.android.OpenCVLoader;
 import android.util.Log;
 import android.view.View;
 import android.view.WindowManager;
@@ -86,6 +87,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        if (!OpenCVLoader.initDebug()) {
+            Log.e(TAG, "OpenCV initialisation failed — bitmap pre-processing will be skipped");
+        }
         if (getSupportActionBar() != null) getSupportActionBar().hide();
         getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN,
                 WindowManager.LayoutParams.FLAG_FULLSCREEN);
@@ -364,49 +368,50 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         Uri uri = data.getData();
         if (uri == null) return;
         try {
-            final Bitmap bitmap = BitmapUtils.decodeBitmapWithOrientation(getContentResolver(), uri);
-            if (bitmap == null) return;
+            final Bitmap raw = BitmapUtils.decodeBitmapWithOrientation(getContentResolver(), uri);
+            if (raw == null) return;
             final String outPath = Utils.getDCIMDirectory() + File.separator
                     + new SimpleDateFormat("yyyy_MM_dd_HH_mm_ss").format(new Date()) + "_ocr.jpg";
             ExecutorService executor = Executors.newSingleThreadExecutor();
-            executor.execute(new Runnable() {
-                @Override
-                public void run() {
-                    try {
-                        long startTs = SystemClock.elapsedRealtime();
-                        String json = predictor.processBitmap(bitmap, outPath);
-                        final OcrResult[] results = OcrResultParser.parse(json);
-                        Log.v("tuancoltech", "results.size: " + results.length);
-                        for (int i = 0; i < results.length; i++) {
-                            Log.d("tuancoltech", "line " + i + ": " + results[i].text + " (" + results[i].score + ") "
-                                    + formatOcrResultBox(results[i]));
-                        }
+            executor.execute(() -> {
+                try {
+                    final Bitmap bitmap = BitmapPreprocessor.INSTANCE.process(raw);
+                    if (bitmap != raw) raw.recycle();
 
-                        // Phase 2: detect question areas and render boxes
-                        List<QuestionRegion> regions =
-                                new SignalFusionQuestionDetector().detect(results, bitmap);
-                        Log.v(TAG, "question regions: " + regions.size());
-                        for (QuestionRegion region : regions) {
-                            Log.d(TAG, "Q" + (region.getIndex() + 1)
-                                    + " bounds: " + region.getBounds()
-                                    + " confidence: " + region.getConfidence());
-                        }
+                    long startTs = SystemClock.elapsedRealtime();
+                    String json = GalleryOcrRouter.processBitmap(predictor, bitmap, outPath);
 
-                        if (regions.isEmpty()) {
-                            runOnUiThread(() -> Toast.makeText(MainActivity.this, "No question found!", Toast.LENGTH_LONG).show());
-                            return;
-                        }
-                        long detectionTime = SystemClock.elapsedRealtime() - startTs;
-                        QuestionBoxRenderer.INSTANCE.render(bitmap, regions, outPath, detectionTime);
-                        Log.v(TAG, "outputPath: " + outPath + "\nExisting: " + (new File(outPath).exists()) + "\nSize: " + (new File(outPath).exists()) + " bytes");
-
-                        runOnUiThread(() -> {
-                            Toast.makeText(MainActivity.this, "Result saved to " + outPath, Toast.LENGTH_LONG).show();
-                            openImageFullScreen(outPath);
-                        });
-                    } catch (Exception e) {
-                        Log.e(TAG, "Gallery OCR failed on background thread", e);
+                    final OcrResult[] results = OcrResultParser.parse(json);
+                    Log.v("tuancoltech", "results.size: " + results.length);
+                    for (int i = 0; i < results.length; i++) {
+                        Log.d("tuancoltech", "line " + i + ": " + results[i].text + " (" + results[i].score + ") "
+                                + formatOcrResultBox(results[i]));
                     }
+
+                    // Phase 2: detect question areas and render boxes
+                    List<QuestionRegion> regions =
+                            new /*MlKitSignalFusionQuestionDetectorV2()*/SignalFusionQuestionDetector().detect(results, bitmap);
+                    Log.v(TAG, "question regions: " + regions.size());
+                    for (QuestionRegion region : regions) {
+                        Log.d(TAG, "Q" + (region.getIndex() + 1)
+                                + " bounds: " + region.getBounds()
+                                + " confidence: " + region.getConfidence());
+                    }
+
+                    if (regions.isEmpty()) {
+                        runOnUiThread(() -> Toast.makeText(MainActivity.this, "No question found!", Toast.LENGTH_LONG).show());
+                        return;
+                    }
+                    long detectionTime = SystemClock.elapsedRealtime() - startTs;
+                    QuestionBoxRenderer.INSTANCE.render(bitmap, regions, outPath, detectionTime);
+                    Log.v(TAG, "outputPath: " + outPath + "\nExisting: " + (new File(outPath).exists()) + "\nSize: " + (new File(outPath).exists()) + " bytes");
+
+                    runOnUiThread(() -> {
+                        Toast.makeText(MainActivity.this, "Result saved to " + outPath, Toast.LENGTH_LONG).show();
+                        openImageFullScreen(outPath);
+                    });
+                } catch (Exception e) {
+                    Log.e(TAG, "Gallery OCR failed on background thread", e);
                 }
             });
             executor.shutdown();

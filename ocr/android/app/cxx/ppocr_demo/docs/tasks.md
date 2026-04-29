@@ -8,7 +8,7 @@
 - [x] T4  Java   — Add `nativeProcessBitmap` native declaration + `processBitmap(Bitmap, String)` wrapper in `Native.java`
 - [x] T5  Java   — Create `OcrResult.java`
 - [x] T6  Java   — Create `OcrResultParser.java`
-- [ ] T7  Tests  — ~~Write `OcrResultParserTest` unit tests~~ *(deferred)*
+- [x] T7  Tests  — Write `OcrResultParserTest` unit tests
 - [x] T8  UI     — Add `btn_gallery` drawable XMLs to `res/drawable/`
 - [x] T9  UI     — Add `btn_gallery` `ImageButton` to `activity_main.xml` (centered between `btn_switch` and `btn_shutter`)
 - [x] T10 Java   — Wire `btn_gallery` in `MainActivity`: field declaration, `initView()`, `onClick()`

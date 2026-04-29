@@ -58,6 +58,8 @@ dependencies {
     implementation libs.okhttp.logging
     implementation libs.gson
     implementation libs.exifinterface
+    implementation libs.opencv
+    implementation libs.mlkit.text.recognition.japanese
     testImplementation libs.junit
     testImplementation libs.robolectric
     androidTestImplementation libs.test.runner

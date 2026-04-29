@@ -2,6 +2,7 @@ package com.baidu.paddle.lite.demo.ppocr_demo
 
 import android.graphics.Bitmap
 import android.graphics.RectF
+import android.util.Log
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
@@ -32,7 +33,9 @@ class SignalFusionQuestionDetector @JvmOverloads constructor(
                     gapAbove = if (i == 0) Float.MAX_VALUE else line.rect.top - sorted[i - 1].rect.bottom,
                     prevLine = if (i == 0) null else sorted[i - 1].result
                 )
-                MarkedLine(line.result, line.rect, isQuestionStart(ctx, signals, calibration, isFirst = i == 0))
+                MarkedLine(line.result, line.rect, isQuestionStart(ctx, signals, calibration, isFirst = i == 0)).apply {
+                    debugLog("line $i is questionStart: $isQuestionStart")
+                }
             }
             .groupIntoRegions()
     }
@@ -285,6 +288,11 @@ class SignalFusionQuestionDetector @JvmOverloads constructor(
         val positives     = fired.filter { it.score > 0 }
         val hasSubQuestion = SUB_QUESTION_PATTERN.containsMatchIn(ctx.line.text.trim())
 
+        debugLog(
+            "line=${ctx.index} text=${ctx.line.text.take(40)} gapAbove=${ctx.gapAbove} " +
+                    "net=$netScore max=$maxIndividual fired=${fired.joinToString { it.name }} hasSubQuestion: $hasSubQuestion"
+        )
+
         return when {
             // Tier 1: one authoritative signal fires — sub-question veto cannot override
             maxIndividual >= TIER1_THRESHOLD                                                         -> true
@@ -501,6 +509,12 @@ class SignalFusionQuestionDetector @JvmOverloads constructor(
         // Japanese SOV: imperative verb at line END
         private val JA_IMPERATIVE  = Regex("""(?:$JA_VERBS)[。]?${'$'}""")
         private val JA_CONDITIONAL = Regex("""(?:のとき|ならば?|とすれば|において|の場合|を仮定して|とする).+?(?:$JA_VERBS)[。]?${'$'}""")
+    }
+
+    private fun debugLog(message: String) {
+        if (BuildConfig.DEBUG) {
+            Log.d("SignalFusionDetector", message)
+        }
     }
 }
 
