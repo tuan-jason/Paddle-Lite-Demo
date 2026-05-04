@@ -23,6 +23,7 @@
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/imgproc.hpp>
+#include <cstdint>
 #include <string>
 #include <vector>
 using namespace paddle::lite_api; // NOLINT
@@ -36,6 +37,11 @@ public:
 
   bool Process_val(int inTextureId, int outTextureId, int textureWidth,
                    int textureHeight, std::string savedImagePath);
+
+  std::string RunOcrOnBitmap(const uint8_t *pixels, int width, int height,
+                             const std::string &savedImagePath);
+
+  std::string RunDetectionOnly(const uint8_t *pixels, int width, int height);
 
 private:
   // Read pixels from FBO texture to CV image

@@ -68,6 +68,7 @@ DetPredictor::DetPredictor(const std::string &modelDir, const int cpuThreadNum,
 }
 
 void DetPredictor::Preprocess(const cv::Mat &srcimg, const int max_side_len) {
+  ratio_hw_.clear();
   cv::Mat img = DetResizeImg(srcimg, max_side_len, ratio_hw_);
   cv::Mat img_fp;
   img.convertTo(img_fp, CV_32FC3, 1.0 / 255.f);
@@ -94,19 +95,17 @@ DetPredictor::Postprocess(const cv::Mat srcimg,
   auto *outptr = output_tensor->data<float>();
   auto shape_out = output_tensor->shape();
 
-  // Save output
+  // Save output — use heap vectors to avoid stack overflow on large model outputs
   int out_size = shape_out[2] * shape_out[3];
-  float pred[out_size];
-  unsigned char cbuf[out_size];
+  std::vector<float> pred(out_size);
+  std::vector<unsigned char> cbuf(out_size);
 
   for (int i = 0; i < out_size; i++) {
     pred[i] = static_cast<float>(outptr[i]);
     cbuf[i] = static_cast<unsigned char>(outptr[i] * 255);
   }
-  cv::Mat cbuf_map(shape_out[2], shape_out[3], CV_8UC1,
-                   reinterpret_cast<unsigned char *>(cbuf));
-  cv::Mat pred_map(shape_out[2], shape_out[3], CV_32F,
-                   reinterpret_cast<float *>(pred));
+  cv::Mat cbuf_map(shape_out[2], shape_out[3], CV_8UC1, cbuf.data());
+  cv::Mat pred_map(shape_out[2], shape_out[3], CV_32F,  pred.data());
 
   const double threshold = double(Config["det_db_thresh"]) * 255;
   const double max_value = 255;

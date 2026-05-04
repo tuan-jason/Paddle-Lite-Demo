@@ -11,3 +11,5 @@
 /build
 /captures
 .externalNativeBuild
+.kotlin
+./app/OpenCV/sdk/build
