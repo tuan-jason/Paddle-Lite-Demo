@@ -93,6 +93,20 @@ Java_com_baidu_paddle_lite_demo_ppocr_1demo_Native_nativeProcessBitmap(
   return cpp_string_to_jstring(env, result);
 }
 
+JNIEXPORT jstring JNICALL
+Java_com_baidu_paddle_lite_demo_ppocr_1demo_Native_nativeDetectBoxes(
+    JNIEnv *env, jclass thiz, jlong ctx, jbyteArray jPixels,
+    jint width, jint height) {
+  if (ctx == 0) return nullptr;
+  jbyte *pixelBytes = env->GetByteArrayElements(jPixels, nullptr);
+  Pipeline *pipeline = reinterpret_cast<Pipeline *>(ctx);
+  std::string result = pipeline->RunDetectionOnly(
+      reinterpret_cast<const uint8_t *>(pixelBytes), width, height);
+  env->ReleaseByteArrayElements(jPixels, pixelBytes, JNI_ABORT);
+  if (result.empty()) return nullptr;
+  return cpp_string_to_jstring(env, result);
+}
+
 #ifdef __cplusplus
 }
 #endif

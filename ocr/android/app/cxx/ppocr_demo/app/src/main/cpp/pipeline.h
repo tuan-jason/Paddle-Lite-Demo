@@ -41,6 +41,8 @@ public:
   std::string RunOcrOnBitmap(const uint8_t *pixels, int width, int height,
                              const std::string &savedImagePath);
 
+  std::string RunDetectionOnly(const uint8_t *pixels, int width, int height);
+
 private:
   // Read pixels from FBO texture to CV image
   void CreateRGBAImageFromGLFBOTexture(int textureWidth, int textureHeight,

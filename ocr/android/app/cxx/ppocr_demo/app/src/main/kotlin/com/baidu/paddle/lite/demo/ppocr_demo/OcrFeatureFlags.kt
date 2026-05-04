@@ -9,4 +9,7 @@ object OcrFeatureFlags {
 
     @JvmField
     var ENABLE_MLKIT_DETECTOR_DEBUG_LOGS: Boolean = true
+
+    @JvmField
+    var USE_HYBRID_OCR: Boolean = true
 }

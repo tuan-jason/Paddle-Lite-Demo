@@ -82,4 +82,14 @@ public class Native {
     public static native boolean nativeProcess(long ctx, int inTextureId, int outTextureId, int textureWidth, int textureHeight, String savedImagePath);
 
     public static native String nativeProcessBitmap(long ctx, byte[] rgbaPixels, int width, int height, String savedImagePath);
+
+    public String detectBoxes(Bitmap bitmap) {
+        if (ctx == 0) return null;
+        Bitmap rgba = bitmap.copy(Bitmap.Config.ARGB_8888, false);
+        ByteBuffer buffer = ByteBuffer.allocate(rgba.getByteCount());
+        rgba.copyPixelsToBuffer(buffer);
+        return nativeDetectBoxes(ctx, buffer.array(), rgba.getWidth(), rgba.getHeight());
+    }
+
+    public static native String nativeDetectBoxes(long ctx, byte[] rgbaPixels, int width, int height);
 }

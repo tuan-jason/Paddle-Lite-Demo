@@ -351,3 +351,28 @@ std::string Pipeline::RunOcrOnBitmap(const uint8_t *pixels, int width,
   json << "]";
   return json.str();
 }
+
+std::string Pipeline::RunDetectionOnly(const uint8_t *pixels, int width, int height) {
+  if (!pixels) return "";
+
+  cv::Mat rgbaImage(height, width, CV_8UC4, const_cast<uint8_t *>(pixels));
+  cv::Mat bgrImage;
+  cv::cvtColor(rgbaImage, bgrImage, cv::COLOR_BGRA2BGR);
+
+  cv::Mat srcimg;
+  bgrImage.copyTo(srcimg);
+
+  auto boxes = detPredictor_->Predict(srcimg, Config_, nullptr, nullptr, nullptr);
+
+  std::ostringstream json;
+  json << "[";
+  for (int i = (int)boxes.size() - 1; i >= 0; i--) {
+    if (i < (int)boxes.size() - 1) json << ",";
+    json << "[[" << boxes[i][0][0] << "," << boxes[i][0][1] << "],"
+         << "[" << boxes[i][1][0] << "," << boxes[i][1][1] << "],"
+         << "[" << boxes[i][2][0] << "," << boxes[i][2][1] << "],"
+         << "[" << boxes[i][3][0] << "," << boxes[i][3][1] << "]]";
+  }
+  json << "]";
+  return json.str();
+}
